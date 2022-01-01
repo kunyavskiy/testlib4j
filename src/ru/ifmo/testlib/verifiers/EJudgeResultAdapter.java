@@ -1,5 +1,6 @@
 package ru.ifmo.testlib.verifiers;
 
+import jdk.jshell.spi.ExecutionControl;
 import ru.ifmo.testlib.*;
 
 import java.io.*;
@@ -29,6 +30,7 @@ public class EJudgeResultAdapter implements ResultAdapter {
     public int getExitCodeFor(Outcome outcome) {
         switch (outcome.getType()) {
             case OK:   return 0;
+            case POINTS:
             case WA:   return 5;
             case PE:   return 4;
             case FAIL: return 6;
@@ -53,11 +55,13 @@ public class EJudgeResultAdapter implements ResultAdapter {
                 case PE:
                     logWriter.print("wrong output format ");
                     break;
+                case WA:
+                    logWriter.print("wrong answer ");
+                    break;
                 case OK:
                     logWriter.print("ok ");
                     break;
-                case WA:
-                    logWriter.print("wrong answer ");
+                case POINTS:
                     break;
             }
             logWriter.println(message);
