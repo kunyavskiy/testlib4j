@@ -1,9 +1,6 @@
-package ru.ifmo.testlib;
+package ru.lksh;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigInteger;
 import java.util.Map;
 
@@ -15,10 +12,7 @@ import java.util.Map;
  * @author Dmitry Paraschenko
  * @author Sergey Melnikov
  */
-public class FileInStream implements InStream {
-	/** A file to read data from. */
-	private final File file;
-
+abstract public class InputStreamInStream implements InStream {
 	/** Current character. */
 	private int currChar;
 
@@ -30,11 +24,8 @@ public class FileInStream implements InStream {
 
 	/**
 	 * Creates new {@link InStream} for specified file and with the specified outcome mapping.
-	 *
-	 * @param file a file to read data from
 	 */
-	FileInStream(File file, Map<Outcome.Type, Outcome.Type> outcomeMapping) {
-		this.file = file;
+	InputStreamInStream(Map<Outcome.Type, Outcome.Type> outcomeMapping) {
 		this.outcomeMapping = outcomeMapping;
 		reset();
 	}
@@ -43,12 +34,14 @@ public class FileInStream implements InStream {
 		outcomeMapping.put(from, to);
 	}
 
+	abstract InputStreamReader getReader() throws IOException;
+
 	public void reset() {
 		try {
 			if (reader != null) {
 				reader.close();
 			}
-			reader = new BufferedReader(new FileReader(file));
+			reader = new BufferedReader(getReader());
 		} catch (IOException ex) {
 		    // The output file might not exist, because the participant is "evil".
 			throw quit(Outcome.Type.PE, "File not found: " + ex.toString());

@@ -1,4 +1,4 @@
-package ru.ifmo.testlib;
+package ru.lksh;
 
 /**
  * The interface for all checkers.

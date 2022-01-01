@@ -1,4 +1,4 @@
-package ru.ifmo.testlib;
+package ru.lksh;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,34 +6,32 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.AccessControlException;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
-import static ru.ifmo.testlib.Outcome.Type.*;
-import ru.ifmo.testlib.verifiers.EJudgeResultAdapter;
-import ru.ifmo.testlib.verifiers.IFMOResultAdapter;
-import ru.ifmo.testlib.verifiers.KittenResultAdapter;
+import ru.lksh.verifiers.EJudgeResultAdapter;
+import ru.lksh.verifiers.IFMOResultAdapter;
+import ru.lksh.verifiers.KittenResultAdapter;
 
 /**
- * This is the checker framework, which is the entry point for all checkers.
+ * This is the interactor framework, which is the entry point for all interactors
  *
  * @author Maxim Buzdalov
  * @author Andrew Stankevich
  * @author Dmitry Paraschenko
  * @author Sergey Melnikov
+ * @author Pavel Kunyavskiy
  */
-public class CheckerFramework {
+public class InteractorFramework {
     private static final String DEFAULT_RESULT_ADAPTER = "checker-type:ifmo";
-    private static final String CHECKER_CLASS_ENTRY = "Checker-Class";
-    private static final String EXPECTED_EXIT_CODE_PROPERTY = "testlib.expected.exitcode";
+    private static final String INTERACTOR_CLASS_ENTRY = "Interactor-Class";
     private static final String SYS_EXIT_DISABLED = "System.exit(int) did not exit. Exiting abnormally.";
     private static final String USAGE =
             "Usage: [<verifier_classname>] <input_file> <output_file> <answer_file> [<result_file> [<test_system_args>]].\n" +
-            "    The <verifier_classname> value may also be specified in MANIFEST.MF as Checker-Class attribute.";
+                    "    The <verifier_classname> value may also be specified in MANIFEST.MF as Interactor-Class attribute.";
 
     private static HashMap<String, ResultAdapter> resultAdapters = new HashMap<>();
 
@@ -57,13 +55,13 @@ public class CheckerFramework {
         System.exit(3);
     }
 
-    private static String findCheckerInManifest() {
+    private static String findInteractorInManifest() {
         try {
             Enumeration<URL> resources = CheckerFramework.class.getClassLoader().getResources("META-INF/MANIFEST.MF");
             while (resources.hasMoreElements()) {
                 Manifest manifest = new Manifest(resources.nextElement().openStream());
                 Attributes attrs = manifest.getMainAttributes();
-                String checkerClass = attrs.getValue(CHECKER_CLASS_ENTRY);
+                String checkerClass = attrs.getValue(INTERACTOR_CLASS_ENTRY);
                 if (checkerClass != null) {
                     return checkerClass;
                 }
@@ -71,25 +69,25 @@ public class CheckerFramework {
         } catch (IOException e) {
             return null;
         }
-        return null;
+        return "Interact";
     }
 
     public static void main(String[] args) {
         int delta = 0;
-        if (args.length < 3 + delta) {
+        /*if (args.length < 3 + delta) {
             printUsageAndExit();
             throw new RuntimeException(SYS_EXIT_DISABLED);
-        }
+        }*/
 
-        String checkerClassName = findCheckerInManifest();
-        if (checkerClassName == null) {
-            checkerClassName = args[0];
+        String interactorClassName = findInteractorInManifest();
+        if (interactorClassName == null) {
+            interactorClassName = args[0];
         }
 
         // This includes two cases:
         //   the case when the checker class name is given in the command line only.
         //   the case when the checker class name is defined in manifest AND given in the command line.
-        if (args[0].equals(checkerClassName)) {
+        if (args[0].equals(interactorClassName)) {
             delta = 1;
         }
 
@@ -100,19 +98,19 @@ public class CheckerFramework {
         Class<?> checkerClass;
 
         try {
-            checkerClass = Class.forName(checkerClassName.replace('/', '.'));
+            checkerClass = Class.forName(interactorClassName.replace('/', '.'));
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
             fatal(e.getMessage());
             throw new RuntimeException(SYS_EXIT_DISABLED);
         }
 
-        run(args, delta, instantiateChecker(checkerClass));
+        run(args, delta, instantiateInteractor(checkerClass));
     }
 
-    private static Checker instantiateChecker(Class<?> checkerClass) {
+    private static Interactor instantiateInteractor(Class<?> interactorClass) {
         try {
-            return (Checker) (checkerClass.newInstance());
+            return (Interactor) (interactorClass.newInstance());
         } catch (InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
             fatal(e.getMessage());
@@ -120,7 +118,7 @@ public class CheckerFramework {
         }
     }
 
-    private static void run(String[] args, int delta, Checker checker) {
+    private static void run(String[] args, int delta, Interactor interactor) {
         PrintWriter result;
         boolean shallCloseResult = true;
 
@@ -162,22 +160,25 @@ public class CheckerFramework {
 
         Outcome outcome;
         try (InStream input = new FileInStream(new File(args[delta]), Outcome.nonOkayIsFail);
-             InStream output = new FileInStream(new File(args[1 + delta]), Collections.emptyMap());
-             InStream answer = new FileInStream(new File(args[2 + delta]), Outcome.nonOkayIsFail)) {
+             InStream output = new StdinInStream(Collections.emptyMap());
+             InStream answer = new FileInStream(new File(args[2 + delta]), Outcome.nonOkayIsFail);
+             PrintWriter outputForChecker = new PrintWriter(args[1 + delta]);
+             PrintWriter outputForParticipant = new PrintWriter(System.out)
+        ) {
             try {
-                outcome = checker.test(input, output, answer);
+                outcome = interactor.interact(input, output, answer, outputForChecker, outputForParticipant);
             } catch (Outcome out) {
                 outcome = out;
             }
 
-            if (outcome.getType() == OK && !output.seekEoF()) {
-                outcome = new Outcome(PE, "Extra information in output file");
+            if (outcome.getType() == Outcome.Type.OK && !output.seekEoF()) {
+                outcome = new Outcome(Outcome.Type.PE, "Extra information in output file");
             }
         } catch (Outcome out) {
             outcome = out;
         } catch (Throwable th) {
             th.printStackTrace();
-            outcome = new Outcome(FAIL, th.toString());
+            outcome = new Outcome(Outcome.Type.FAIL, th.toString());
         }
 
         resultAdapter.printMessage(outcome, result, args.length <= 4);
@@ -188,33 +189,20 @@ public class CheckerFramework {
         }
 
         int theExitCode = resultAdapter.getExitCodeFor(outcome);
-        try {
-            String expectedExitCode = System.getProperty(EXPECTED_EXIT_CODE_PROPERTY);
-            if (expectedExitCode != null) {
-                if (String.valueOf(theExitCode).equals(expectedExitCode)) {
-                    System.exit(0); // exit codes match
-                } else {
-                    System.err.println("Expected exit code is " + expectedExitCode + ", but the actual one is " + theExitCode);
-                    System.exit(1); // exit codes did not match
-                }
-            }
-        } catch (AccessControlException e) {
-            // nop
-        }
         System.exit(theExitCode);
     }
 
-    public static void runChecker(Class<? extends Checker> checkerClass, String[] args) {
-        runChecker(instantiateChecker(checkerClass), args);
+    public static void runInteractor(Class<? extends Interactor> interactor, String[] args) {
+        runInteractor(instantiateInteractor(interactor), args);
     }
 
     @SuppressWarnings("WeakerAccess")
-    public static void runChecker(Checker checker, String[] args) {
+    public static void runInteractor(Interactor interactor, String[] args) {
         if (args.length < 3) {
             System.err.println("Usage: <input_file> <output_file> <answer_file> [<result_file> [<test_system_args>]]");
             System.exit(3);
             throw new RuntimeException(SYS_EXIT_DISABLED);
         }
-        run(args, 0, checker);
+        run(args, 0, interactor);
     }
 }

@@ -68,7 +68,7 @@
         <attribute name="expected-exit-code"/>
         <sequential>
             <echo level="info" message="Running checker @{name} on test: @{description}"/>
-            <java fork="false" failonerror="true" classname="ru.ifmo.testlib.CheckerFramework">
+            <java fork="false" failonerror="true" classname="ru.lksh.CheckerFramework">
                 <classpath>
                     <pathelement location="${deploy.dir}/testlib4j.jar"/>
                     <pathelement location="${examples.deploy.dir}/@{name}.jar"/>

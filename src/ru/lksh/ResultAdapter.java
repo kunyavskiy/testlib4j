@@ -1,4 +1,4 @@
-package ru.ifmo.testlib;
+package ru.lksh;
 
 import java.io.*;
 

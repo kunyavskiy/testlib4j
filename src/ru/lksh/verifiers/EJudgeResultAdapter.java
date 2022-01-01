@@ -1,7 +1,8 @@
-package ru.ifmo.testlib.verifiers;
+package ru.lksh.verifiers;
 
-import jdk.jshell.spi.ExecutionControl;
-import ru.ifmo.testlib.*;
+import ru.lksh.*;
+import ru.lksh.Outcome;
+import ru.lksh.ResultAdapter;
 
 import java.io.*;
 

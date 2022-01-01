@@ -22,10 +22,10 @@ We use Ant due to its simplicity.
 
 ## How to implement your checker
 
-Every checker should implement the `ru.ifmo.testlib.Checker` interface.
+Every checker should implement the `Checker` interface.
 There is a single method to implement, namely,
 `Outcome test(InStream inf, InStream ouf, InStream ans)`,
-where the arguments of type `ru.ifmo.testlib.InStream` correspond to
+where the arguments of type `InStream` correspond to
 the input file, the output file and the answer file, correspondingly.
 
 In this method, you do everything you normally do within a checker.
@@ -64,7 +64,7 @@ it is located in the default package, and the class files are packed in
 a file called `Check.jar`), you can run it as follows:
 
 ```
-java -cp Check.jar:testlib4j.jar ru.ifmo.testlib.CheckerFramework MyChecker <input> <output> <answer>
+java -cp Check.jar:testlib4j.jar CheckerFramework MyChecker <input> <output> <answer>
 ```
 
 where `testlib4j.jar` is the JAR file containing classes from this project.
@@ -90,7 +90,7 @@ contains the single integer which is the same as the right answer.
 
 ```
 import ru.ifmo.testlib.*;
-import static ru.ifmo.testlib.Outcome.Type.*;
+import static Outcome.Type.*;
 
 public class CompareInteger implements Checker {
     public Outcome test(InStream inf, InStream ouf, InStream ans) {
